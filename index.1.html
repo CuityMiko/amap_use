@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>高德德图</title>
+    <style>
+        #container {
+            width: 600px;
+            height: 300px;
+        }
+        #dwmap {
+            width: 400px;
+            height: 200px;
+        }
+    </style>
+    <script type="text/javascript" src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.9&key=45d4366b27f23ff8bc8d49f16c93e836&plugin=AMap.Autocomplete,AMap.PlaceSearch,AMap.Geocoder"></script>
+</head>
+<body>
+    <div id='container'></div>
+    <div id="tip"></div>
+    <br>
+    <div>
+        <input type="text" name="txtsearch" id="txtsearch">
+        <button id="btnsearch">搜索</button>
+        <!-- <div id="panel"></div> -->
+    </div>
+    <br>
+    <div id="seladdress"></div>
+    <br>
+    <span>定位后的地图</span>
+    <div id="dwmap"></div>
+    <script type="text/javascript">
+        var map, geolocation, curCityCode, auto;
+
+        // 加载地图，调用浏览器定位服务
+        map = new AMap.Map('container', {
+            resizeEnable: true
+        });
+
+        // 输入提示
+        auto = new AMap.Autocomplete({
+            input: "txtsearch"
+        });
+
+        map.plugin('AMap.Geolocation', function() {
+            geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true, // 是否使用高精度定位，默认:true
+                timeout: 10000,           // 超过10秒后停止定位，默认：无穷大
+                buttonOffset: new AMap.Pixel(10, 20), // 定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+                zoomToAccuracy: true,     // 定位成功后调整地图视野范围使定位位置及精度范围视野内可见，默认：false
+                buttonPosition:'RB'
+            });
+            map.addControl(geolocation);
+            geolocation.getCurrentPosition();
+            AMap.event.addListener(geolocation, 'complete', onComplete); // 返回定位信息
+            AMap.event.addListener(geolocation, 'error', onError);       // 返回定位出错信息
+        });
+        // 解析定位结果
+        function onComplete(data) {
+            // console.log(data);
+            var str=['定位成功！'];
+            curCityCode = data.addressComponent.citycode;
+            console.log(curCityCode);
+            // 当前位置
+            var _current = '当前位置：' + data.formattedAddress;
+            str.push(_current);
+            var _address = '地址：' + data.addressComponent.province + ' '
+                                    + data.addressComponent.city + ' '
+                                    + data.addressComponent.district + ' '
+                                    + data.addressComponent.street + ' '
+                                    + data.addressComponent.township
+                                    + data.addressComponent.streetNumber;
+            str.push(_address);
+            var _jwd = '经度：' + data.position.getLng() + '，纬度：' + data.position.getLat();
+            str.push(_jwd);
+            document.getElementById('tip').innerHTML = str.join('<br>');
+        }
+        //解析定位错误信息
+        function onError(data) {
+            document.getElementById('tip').innerHTML = '定位失败！';
+        }
+
+        $("#btnsearch").on("click", function() {
+            if($("#txtsearch").val() != '') {
+                AMap.service(["AMap.PlaceSearch"], function() {
+                    var placeSearch = new AMap.PlaceSearch({ // 构造地点查询类
+                        pageSize: 5,
+                        pageIndex: 1,
+                        city: "0571", //城市
+                        map: map
+                        // panel: "panel"
+                    });
+                    //关键字查询
+                    placeSearch.search($("#txtsearch").val(), function(status, result) {
+                        console.log(status);
+                        console.log(result);
+                    });
+                    AMap.event.addListener(placeSearch, "markerClick", function(e) {
+                        console.log(e);
+                        var _seljwd = '选择的经纬度：经度：' + e.data.location.lng + '，纬度：' + e.data.location.lat;
+                        var _seladdress = '选择的地址：' + e.data.adname + e.data.address;
+                        $("#seladdress").html(_seljwd + '<br>' + _seladdress);
+                        // console.log(e.data.location.lat);
+                        // console.log(e.data.location.lng);
+                        // console.log(e.data.location);//当前marker的经纬度信息
+                        // document.getElementById("lnglat").value = e.data.location.lng + ',' + e.data.location.lat;
+                        // console.log( e.data.address);//获取当前marker的具体地址信息
+                        // console.log(e.data);//则是包含所有的marker数据
+                        // document.getElementById("input").value =  e.data.address;
+                        var _map1 = new AMap.Map('dwmap', {
+                            resizeEnable: true,
+                            center: [e.data.location.lng, e.data.location.lat],
+                            zoom: 18
+                        });
+                        new AMap.Marker({
+                            map: _map1,
+                            icon: "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png",
+                            position: [e.data.location.lng, e.data.location.lat]
+                        });
+                    })
+                });
+            }
+        })
+    </script>
+</body>
+</html>

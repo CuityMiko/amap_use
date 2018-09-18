@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>高德德图</title>
+    <style>
+        #container {
+            width: 600px;
+            height: 300px;
+        }
+        #dwmap {
+            width: 400px;
+            height: 200px;
+        }
+    </style>
+    <script type="text/javascript" src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.9&key=45d4366b27f23ff8bc8d49f16c93e836&plugin=AMap.Autocomplete,AMap.PlaceSearch,AMap.Geocoder"></script>
+</head>
+<body>
+    <div id='container'></div>
+    <br>
+    <div>
+        <input type="text" name="txtsearch" id="txtsearch">
+        <button id="btnsearch">搜索</button>
+    </div>
+    <br>
+    <div id="seladdress"></div>
+    <br>
+    <span>定位后的地图</span>
+    <div id="dwmap"></div>
+    <script type="text/javascript">
+        var map, geolocation, curCityCode, auto, currLng, currLat;
+
+        // 加载地图，调用浏览器定位服务
+        map = new AMap.Map('container', {
+            resizeEnable: true,
+            zoom: 18
+        });
+
+        // 输入提示
+        auto = new AMap.Autocomplete({
+            input: "txtsearch"
+        });
+
+        console.log(auto);
+
+        map.plugin('AMap.Geolocation', function() {
+            geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,
+                timeout: 10000,   
+                buttonOffset: new AMap.Pixel(10, 20),
+                zoomToAccuracy: true,
+                buttonPosition:'RB'
+            });
+            map.addControl(geolocation);
+            geolocation.getCurrentPosition();
+            AMap.event.addListener(geolocation, 'complete', function(data) { // 返回定位信息
+                if (data && data.position && data.addressComponent) {
+                    curCityCode = data.addressComponent.citycode;
+                    currLng = data.position.getLng();
+                    currLat = data.position.getLat();
+                }
+            });
+        });
+
+        $("#btnsearch").on("click", function() {
+            if($("#txtsearch").val() != '') {
+                AMap.service(["AMap.PlaceSearch"], function() {
+                    var placeSearch = new AMap.PlaceSearch({ // 构造地点查询类
+                        pageSize: 5,
+                        pageIndex: 1,
+                        city: curCityCode, //城市
+                        map: map
+                    });
+                    // 关键字查询
+                    placeSearch.search($("#txtsearch").val());
+                    // 点击Mark事件    
+                    AMap.event.addListener(placeSearch, "markerClick", function(e) {
+                        var _seljwd = '选择的经纬度：经度：' + e.data.location.lng + '，纬度：' + e.data.location.lat;
+                        var _seladdress = '选择的地址：' + e.data.adname + e.data.address;
+                        var _seldw = [e.data.location.lng, e.data.location.lat];
+                        $("#txtsearch").val(e.data.adname + e.data.address)
+                        $("#seladdress").html(_seljwd + '<br>' + _seladdress);
+                        var _selmap = new AMap.Map('dwmap', {
+                            resizeEnable: true,
+                            center: _seldw,
+                            zoom: 18
+                        });
+                        new AMap.Marker({
+                            map: _selmap,
+                            position: _seldw
+                        });
+                    })
+                });
+            }
+        })
+    </script>
+</body>
+</html>
